@@ -3,7 +3,9 @@
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
+
     http://www.apache.org/licenses/LICENSE-2.0
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -12,6 +14,7 @@ limitations under the License.
 
 Contributors:
   Thomas Roger <troger@nuxeo.com>
+  Nelson Silva <nsilva@nuxeo.com>
 -->
 <link rel="import" href="../polymer/polymer.html">
 <link rel="import" href="../paper-styles/paper-styles.html">
@@ -30,6 +33,7 @@ Contributors:
 
 <link rel="import" href="better-dateinput-polyfill.html">
 
+<link rel="import" href="nuxeo-document-acl-table.html">
 <link rel="import" href="nuxeo-i18n.html">
 <link rel="import" href="nuxeo-popup-permission.html">
 <link rel="import" href="nuxeo-popup-confirm.html">
@@ -44,239 +48,82 @@ An element providing document permissions management
 -->
 <dom-module id="nuxeo-document-permissions">
   <template>
-    <style>
-      .acl-table {
-        display: table;
-        border-collapse: collapse;
-        width: 100%;
-        line-height: 1.3em;
-      }
-
-      .acl-table-row {
-        display: table-row;
-      }
-
-      .acl-table-headers {
-        display: table-row;
-      }
-
-      .acl-table-row > div {
-        display: table-cell;
-        border: 1px solid #e7e7e7;
-        padding: .6em .4em;
-        color: #000;
-      }
-
-      .acl-table-headers > div {
-        background-color: #f8f9fb;
-        font-weight: bold;
-      }
-    </style>
-
     <paper-toast id="toast"></paper-toast>
 
     <nuxeo-document id="doc" auto doc-id="{{docId}}" doc-path="{{docPath}}" response="{{doc}}"
       enrichers="acls, permissions, userVisiblePermissions" params="{{params}}"></nuxeo-document>
 
+    <!-- Local permissions -->
     <div class="bubbleBox">
       <div class="bubbleHeader jsLocalPermissions">
         <h3>[[i18n('label.permissions.locallyDefined', 'Permissions defined locally')]]</h3>
-        <template is="dom-if" if="{{hasEverythingRight}}">
+        <template is="dom-if" if="[[_hasPermission(doc,'Everything')]]">
           <nuxeo-popup-permission doc-id="{{doc.uid}}"
-            user-visible-permissions="{{doc.contextParameters.userVisiblePermissions}}"
-            on-acecreated="onACECreated"></nuxeo-popup-permission>
+            user-visible-permissions="{{doc.contextParameters.userVisiblePermissions}}">
+          </nuxeo-popup-permission>
         </template>
       </div>
-      <template is="dom-if" if="{{hasLocalAces}}">
-        <div>
-          <div class="acl-table">
-            <div class="acl-table-row acl-table-headers">
-              <div class="tmp-tab">[[i18n('label.permissions.userGroup', 'User / Group')]]</div>
-              <div class="tmp-tab">[[i18n('label.permissions.right', 'Right')]]</div>
-              <div class="tmp-tab">[[i18n('label.permissions.timeFrame', 'Time Frame')]]</div>
-              <div class="tmp-tab">[[i18n('label.permissions.grantedBy', 'Granted by')]]</div>
-              <div class="tmp-tab">[[i18n('label.permissions.actions', 'Actions')]]</div>
-            </div>
-            <template is="dom-repeat" items="{{localAces}}" as="ace">
-              <div class$="[[aclRowClass(ace)]]">
-                <div><span class$="[[entityClass(ace.username)]]" title="[[entityTooltip(ace.username)]]">[[entityDisplay(ace.username)]]</span>
-                </div>
-                <div><span class="label">[[i18n(ace.permission)]]</span></div>
-                <div><span>{{formatTimeFrame(ace)}}</span></div>
-                <div><span class$="[[entityClass(ace.creator)]]" title="[[entityTooltip(ace.creator)]]">[[entityDisplay(ace.creator)]]</span>
-                </div>
-                <div>
-                  <template is="dom-if" if="{{hasEverythingRight}}">
-                    <nuxeo-popup-permission doc-id="{{doc.uid}}" ace="{{ace}}"
-                      user-visible-permissions="{{doc.contextParameters.userVisiblePermissions}}"
-                      on-aceupdated="onACEUpdated"></nuxeo-popup-permission>
-                    <paper-icon-button icon="delete" on-click="localRightsDel"></paper-icon-button>
-                    <nuxeo-popup-confirm id="confirmation" delete-label="[[i18n('command.delete', 'Delete')]]"
-                      cancel-label="[[i18n('label.permissions.cancel', 'Cancel')]]">
-                      <paper-dialog-scrollable>
-                        <h2>
-                          [[i18n('label.permissions.deleteConfirmation', 'The following permission will be deleted')]]
-                        </h2>
-
-                        <div class="acl-table">
-                          <div class="acl-table-row acl-table-headers">
-                            <div class="tmp-tab">[[i18n('label.permissions.userGroup', 'User / Group')]]</div>
-                            <div class="tmp-tab">[[i18n('label.permissions.right', 'Right')]]</div>
-                            <div class="tmp-tab">[[i18n('label.permissions.timeFrame', 'Time Frame')]]</div>
-                            <div class="tmp-tab">[[i18n('label.permissions.grantedBy', 'Granted by')]]</div>
-                          </div>
-                          <div class$="[[aclRowClass(ace)]]">
-                            <div><span class$="[[entityClass(ace.username)]]" title="[[entityTooltip(ace.username)]]">[[entityDisplay(ace.username)]]</span>
-                            </div>
-                            <div><span class="label">[[i18n(ace.permission)]]</span></div>
-                            <div><span>{{formatTimeFrame(ace)}}</span></div>
-                            <div><span class$="[[entityClass(ace.creator)]]" title="[[entityTooltip(ace.creator)]]">[[entityDisplay(ace.creator)]]</span>
-                            </div>
-                          </div>
-                        </div>
-                      </paper-dialog-scrollable>
-                    </nuxeo-popup-confirm>
-                  </template>
-                </div>
-              </div>
-            </template>
-          </div>
-        </div>
-      </template>
-      <template is="dom-if" if="{{!hasLocalAces}}">
-        <p class="emptyResult">[[i18n('label.permissions.noLocalPermissions', 'There is no local permission.')]]</p>
-      </template>
+      <div>
+        <nuxeo-document-acl-table doc="[[doc]]" acl-filter="_excludeInheritedAcls" ace-filter="_excludeExternalUserAces"
+          show-actions="[[_hasPermission(doc,'Everything')]]">
+          <p class="emptyResult">[[i18n('label.permissions.noLocalPermissions', 'There is no local permission.')]]</p>
+        </nuxeo-document-acl-table>
+      </div>
     </div>
 
+    <!-- Inherited permissions -->
     <div class="bubbleBox">
       <div class="bubbleHeader">
-        <template is="dom-if" if="{{canBlockInheritance}}">
-          <paper-button id="block" on-click="blockInheritance">[[i18n('label.permissions.block', 'Block')]]</paper-button>
+        <template is="dom-if" if="[[_hasPermission(doc,'Everything')]]">
+          <template is="dom-if" if="[[!_empty(inheritedAces)]]">
+            <paper-button id="block" on-click="blockInheritance">[[i18n('label.permissions.block', 'Block')]]</paper-button>
+          </template>
+          <template is="dom-if" if="[[_empty(inheritedAces)]]">
+            <paper-button id="unblock" on-click="unblockInheritance">[[i18n('label.permissions.unblock', 'Unblock')]]</paper-button>
+          </template>
         </template>
-        <template is="dom-if" if="{{canUnblockInheritance}}">
-          <paper-button id="unblock" on-click="unblockInheritance">[[i18n('label.permissions.unblock', 'Unblock')]]</paper-button>
-        </template>
+
         <h3>[[i18n('label.permissions.inherited', 'Permissions inherited from upper levels')]]</h3>
-        <template is="dom-if" if="{{!hasInheritedAces}}">
+        <template is="dom-if" if="[[_empty(inheritedAces)]]">
           <span class="label label-warning">[[i18n('label.permissions.blocked', 'Blocked')]]</span>
         </template>
       </div>
       <div>
-        <template is="dom-if" if="{{hasInheritedAces}}">
-          <div class="tips">
-            [[i18n('label.permissions.blockDescription', 'If you want to explicitly control the access to this document you can block the permissions inheritance. Any change made on parent document will not affect the access conditions to this document. You and the administrators will be added to local permissions.')]]
-          </div>
-          <div class="acl-table">
-            <div class="acl-table-row acl-table-headers">
-              <div class="tmp-tab">[[i18n('label.permissions.userGroup', 'User / Group')]]</div>
-              <div class="tmp-tab">[[i18n('label.permissions.right', 'Right')]]</div>
-              <div class="tmp-tab">[[i18n('label.permissions.timeFrame', 'Time Frame')]]</div>
-              <div class="tmp-tab">[[i18n('label.permissions.grantedBy', 'Granted by')]]</div>
-            </div>
-            <template is="dom-repeat" items="{{inheritedAces}}" as="ace">
-              <div class$="[[aclRowClass(ace)]]">
-                <div><span class$="[[entityClass(ace.username)]]" title="[[entityTooltip(ace.username)]]">[[entityDisplay(ace.username)]]</span>
-                </div>
-                <div><span class="label">[[i18n(ace.permission)]]</span></div>
-                <div><span>{{formatTimeFrame(ace)}}</span></div>
-                <div><span class$="[[entityClass(ace.creator)]]" title="[[entityTooltip(ace.creator)]]">[[entityDisplay(ace.creator)]]</span>
-                </div>
-              </div>
-            </template>
-          </div>
-        </template>
-        <template is="dom-if" if="{{!hasInheritedAces}}">
+        <div class="tips" hidden$="[[_empty(inheritedAces)]]">
+          [[i18n('label.permissions.blockDescription', 'If you want to explicitly control the access to this document you can block the permissions inheritance. Any change made on parent document will not affect the access conditions to this document. You and the administrators will be added to local permissions.')]]
+        </div>
+        <nuxeo-document-acl-table doc="[[doc]]" aces="{{inheritedAces}}" acl-filter="_onlyInheritedAcls" show-actions="false">
           <p class="emptyResult">
             [[i18n('label.permissions.noInheritedText', 'Only local permissions are applied. Unblock to restore the permissions inheritance from upper levels.')]]
           </p>
-        </template>
+        </nuxeo-document-acl-table>
       </div>
     </div>
 
+    <!-- External users permissions -->
     <div class="bubbleBox">
       <div class="bubbleHeader">
         <h3>[[i18n('label.permissions.external', 'Permissions Assigned to External Users')]]</h3>
-        <template is="dom-if" if="{{hasEverythingRight}}">
+        <template is="dom-if" if="[[_hasPermission(doc, 'Everything')]]">
           <nuxeo-popup-permission doc-id="{{doc.uid}}"
             user-visible-permissions="{{doc.contextParameters.userVisiblePermissions}}"
-            share-with-external="true"
-            on-acecreated="onACECreated"></nuxeo-popup-permission>
+            share-with-external="true"></nuxeo-popup-permission>
         </template>
       </div>
       <div class="tips">
         [[i18n('label.permissions.externalDescription', 'Sharing to external users does not create new user accounts. External users are provided a link to access this document.')]]
       </div>
-      <template is="dom-if" if="{{hasExternalAces}}">
-        <div>
-          <div class="acl-table">
-            <div class="acl-table-row acl-table-headers">
-              <div class="tmp-tab">[[i18n('label.permissions.userGroup', 'User / Group')]]</div>
-              <div class="tmp-tab">[[i18n('label.permissions.right', 'Right')]]</div>
-              <div class="tmp-tab">[[i18n('label.permissions.timeFrame', 'Time Frame')]]</div>
-              <div class="tmp-tab">[[i18n('label.permissions.grantedBy', 'Granted by')]]</div>
-              <div class="tmp-tab">[[i18n('label.permissions.actions', 'Actions')]]</div>
-            </div>
-            <template is="dom-repeat" items="{{externalAces}}" as="ace">
-              <div class$="[[aclRowClass(ace)]]">
-                <div><span class$="[[entityClass(ace.username)]]" title="[[entityTooltip(ace.username)]]">[[entityDisplay(ace.username)]]</span>
-                </div>
-                <div><span class="label">[[i18n(ace.permission)]]</span></div>
-                <div><span>{{formatTimeFrame(ace)}}</span></div>
-                <div><span class$="[[entityClass(ace.creator)]]" title="[[entityTooltip(ace.creator)]]">[[entityDisplay(ace.creator)]]</span>
-                </div>
-                <div>
-                  <template is="dom-if" if="{{hasEverythingRight}}">
-                    <nuxeo-popup-permission doc-id="{{doc.uid}}" ace="{{ace}}"
-                      user-visible-permissions="{{doc.contextParameters.userVisiblePermissions}}"
-                      share-with-external="true"
-                      on-aceupdated="onACEUpdated"></nuxeo-popup-permission>
-                    <paper-icon-button icon="send" on-click="sendEmailExternalSharing"></paper-icon-button>
-                    <paper-icon-button icon="delete" on-click="localRightsDel"></paper-icon-button>
-                    <nuxeo-popup-confirm id="confirmation" delete-label="[[i18n('command.delete', 'Delete')]]"
-                      cancel-label="[[i18n('label.permissions.cancel', 'Cancel')]]">
-                      <paper-dialog-scrollable>
-                        <h2>
-                          [[i18n('label.permissions.deleteConfirmation', 'The following permission will be deleted')]]
-                        </h2>
-
-                        <div class="acl-table">
-                          <div class="acl-table-row acl-table-headers">
-                            <div class="tmp-tab">[[i18n('label.permissions.userGroup', 'User / Group')]]</div>
-                            <div class="tmp-tab">[[i18n('label.permissions.right', 'Right')]]</div>
-                            <div class="tmp-tab">[[i18n('label.permissions.timeFrame', 'Time Frame')]]</div>
-                            <div class="tmp-tab">[[i18n('label.permissions.grantedBy', 'Granted by')]]</div>
-                          </div>
-                          <div class$="[[aclRowClass(ace)]]">
-                            <div><span class$="[[entityClass(ace.username)]]" title="[[entityTooltip(ace.username)]]">[[entityDisplay(ace.username)]]</span>
-                            </div>
-                            <div><span class="label">[[i18n(ace.permission)]]</span></div>
-                            <div><span>{{formatTimeFrame(ace)}}</span></div>
-                            <div><span class$="[[entityClass(ace.creator)]]" title="[[entityTooltip(ace.creator)]]">[[entityDisplay(ace.creator)]]</span>
-                            </div>
-                          </div>
-                        </div>
-                      </paper-dialog-scrollable>
-                    </nuxeo-popup-confirm>
-                  </template>
-                </div>
-              </div>
-            </template>
-          </div>
-        </div>
-      </template>
-      <template is="dom-if" if="{{!hasExternalAces}}">
+      <nuxeo-document-acl-table doc="[[doc]]" aces="[[externalAces]]" ace-filter="_onlyExternalUserAces"
+        acl-filter="_excludeInheritedAcls"
+        show-actions="[[_hasPermission(doc,'Everything')]]"
+        share-with-external="true">
         <p class="emptyResult">[[i18n('label.permissions.noExternalPermission', 'The document is not shared with any external user.')]]</p>
-      </template>
+      </nuxeo-document-acl-table>
     </div>
 
-    <nuxeo-operation id="rmPermission" op="Document.RemovePermission" input="{{doc.uid}}"
-      on-response="refresh"></nuxeo-operation>
-    <nuxeo-operation id="blockOp" op="Document.BlockPermissionInheritance" input={{docId}}
-      on-response="refresh"></nuxeo-operation>
-    <nuxeo-operation id="unblockOp" op="Document.UnblockPermissionInheritance" input={{docId}}
-      on-response="refresh"></nuxeo-operation>
-    <nuxeo-operation id="sendNotificationEmailPermissionOp" op="Document.SendNotificationEmailForPermission" input={{docId}}
-      on-response="refresh"></nuxeo-operation>
+    <nuxeo-operation id="blockOp" op="Document.BlockPermissionInheritance" input="{{doc.uid}}"></nuxeo-operation>
+    <nuxeo-operation id="unblockOp" op="Document.UnblockPermissionInheritance" input="{{doc.uid}}"></nuxeo-operation>
+
   </template>
 </dom-module>
 
@@ -297,51 +144,6 @@ An element providing document permissions management
         type: String,
         value: ''
       },
-      hasEverythingRight: {
-        type: Boolean,
-        value: false,
-        computed: 'computeEverythingRight(doc)'
-      },
-      hasLocalAces: {
-        type: Boolean,
-        value: false,
-        computed: 'computeHasLocalAces(doc)'
-      },
-      hasInheritedAces: {
-        type: Boolean,
-        value: false,
-        computed: 'computeHasInheritedAces(doc)'
-      },
-      hasExternalAces: {
-        type: Boolean,
-        value: false,
-        computed: 'computeHasExternalAces(doc)'
-      },
-      localAces: {
-        type: Array,
-        value: [],
-        computed: 'computeLocalAces(doc)'
-      },
-      inheritedAces: {
-        type: Array,
-        value: [],
-        computed: 'computeInheritedAces(doc)'
-      },
-      externalAces: {
-        type: Array,
-        value: [],
-        computed: 'computeExternalAces(doc)'
-      },
-      canBlockInheritance: {
-        type: Boolean,
-        value: false,
-        computed: 'computeCanBlockInheritance(hasEverythingRight, hasInheritedAces)'
-      },
-      canUnblockInheritance: {
-        type: Boolean,
-        value: false,
-        computed: 'computeCanUnblockInheritance(hasEverythingRight, hasInheritedAces)'
-      },
       params: {
         type: Object,
         value: {
@@ -350,6 +152,13 @@ An element providing document permissions management
           "time": new Date().getTime()
         }
       }
+    },
+
+    listeners: {
+      'acecreated': 'onACECreated',
+      'aceupdated': 'onACEUpdated',
+      'acedeleted': 'onACEDeleted',
+      'notification': 'onNotification'
     },
 
     refresh: function () {
@@ -369,232 +178,49 @@ An element providing document permissions management
       this.refresh();
     },
 
-    formatTimeFrame: function (ace) {
-      var now = moment();
-      var begin = ace.begin;
-      var end = ace.end;
-      var format = 'D MMM YYYY';
-
-      var sinceStr = this.i18n('label.permissions.since', 'Since') + ' ';
-      var fromStr = this.i18n('label.permissions.from', 'From') + ' ';
-      var untilStr = this.i18n('label.permissions.until', 'Until') + ' ';
-      var untilMiddleStr = ' ' + this.i18n('label.permissions.untilMiddle', 'until') + ' ';
-
-      if (begin !== null && end === null) {
-        return (now.isAfter(begin) ? sinceStr : fromStr) + moment(begin).format(format);
-      } else if (begin === null && end !== null) {
-        return untilStr + moment(end).format(format);
-      } else if (begin !== null && end !== null) {
-        return (now.isAfter(begin) ? sinceStr : fromStr) + moment(begin).format(format) + untilMiddleStr + moment(end).format(format);
-      } else {
-        return this.i18n('label.permissions.permanent', 'Permanent');
-      }
+    onACEDeleted: function() {
+      this.$.toast.text = this.i18n('label.permissions.permissionDeleted', 'Permission Deleted');
+      this.$.toast.show();
+      this.refresh();
     },
 
-    get permissions() {
-      return this.doc && this.doc.contextParameters && this.doc.contextParameters.permissions;
+    onNotification: function() {
+      this.$.toast.text = this.i18n('label.permissions.permissionNotificationSent', 'Notification Email Sent');
+      this.$.toast.show();
     },
 
-    get acls() {
-      return this.doc && this.doc.contextParameters && this.doc.contextParameters.acls;
+    _hasPermission: function (doc, name) {
+      var permissions = this.doc && this.doc.contextParameters && this.doc.contextParameters.permissions;
+      return permissions && permissions.indexOf('Everything') !== -1;
     },
 
-    localRightsDel: function (e, i) {
-      var self = this;
-      e.model.dataHost.previousElementSibling.toggle(function () {
-        // Walk on data hosts in order to retrieve the 'item' property from the repeat loop item context
-        var item = e.model.dataHost.dataHost.ace;
-        self.$.rmPermission.params = {
-          id: item.id
-        };
-        self.$.rmPermission.execute().then(function() {
-          self.$.toast.text = self.i18n('label.permissions.permissionDeleted', 'Permission Deleted');
-          self.$.toast.show();
-        });
-      });
+    _empty: function(arr) {
+      return arr.length == 0;
     },
 
-    computeEverythingRight: function (doc) {
-      if (this.permissions) {
-        return this.permissions.indexOf('Everything') !== -1;
-      }
-      return false;
+    _excludeInheritedAcls: function (acl) {
+        return acl.name !== 'inherited';
     },
 
-    computeHasLocalAces: function (doc) {
-      return this.computeLocalAces(doc).length > 0;
+    _onlyInheritedAcls: function (acl) {
+        return acl.name === 'inherited';
     },
 
-    computeHasInheritedAces: function (doc) {
-      return this.computeInheritedAces(doc).length > 0;
+    _excludeExternalUserAces: function (ace) {
+      return ace.granted && (ace.status === 'pending' || ace.status === 'effective') && ace.externalUser === false;
     },
 
-    computeHasExternalAces: function (doc) {
-      return this.computeExternalAces(doc).length > 0;
-    },
-
-    computeLocalAces: function (doc) {
-      var localAces = [];
-      if (this.acls) {
-        for (var i = 0; i < this.acls.length; i++) {
-          var acl = this.acls[i];
-          if (acl.name !== 'inherited') {
-            for (var j = 0; j < acl.aces.length; j++) {
-              var ace = acl.aces[j];
-              if (ace.granted && (ace.status === 'pending' || ace.status === 'effective') && ace.externalUser === false) {
-                ace.aclName = acl.name;
-                localAces.push(ace);
-              }
-            }
-          }
-        }
-      }
-      localAces.sort(this._sortAces);
-      return localAces;
-    },
-
-    computeInheritedAces: function (doc) {
-      var inheritedAces = [];
-      if (this.acls) {
-        for (var i = 0; i < this.acls.length; i++) {
-          if (this.acls[i].name === 'inherited') {
-            var acl = this.acls[i];
-            for (var j = 0; j < acl.aces.length; j++) {
-              var ace = acl.aces[j];
-              if (ace.granted && (ace.status === 'pending' || ace.status === 'effective')) {
-                inheritedAces.push(ace);
-              }
-            }
-          }
-        }
-      }
-      inheritedAces.sort(this._sortAces);
-      return inheritedAces;
-    },
-
-    computeExternalAces: function (doc) {
-      var externalAces = [];
-      if (this.acls) {
-        for (var i = 0; i < this.acls.length; i++) {
-          if (this.acls[i].name !== 'inherited') {
-            var acl = this.acls[i];
-            for (var j = 0; j < acl.aces.length; j++) {
-              var ace = acl.aces[j];
-              if (ace.granted && (ace.status === 'pending' || ace.status === 'effective') && ace.externalUser === true) {
-                externalAces.push(ace);
-              }
-            }
-          }
-        }
-      }
-      externalAces.sort(this._sortAces);
-      return externalAces;
-    },
-
-    _sortAces: function (a, b) {
-      if (a.begin === null) {
-        return -1;
-      } else if (b.begin === null) {
-        return 1;
-      } else {
-        var aBegin = moment(a.begin);
-        var bBegin = moment(b.begin);
-        return aBegin.isBefore(bBegin) ? -1 : 1;
-      }
-    },
-
-    computeCanBlockInheritance: function (hasEverythingRight, hasInheritedAces) {
-      return hasEverythingRight && hasInheritedAces;
-    },
-
-    computeCanUnblockInheritance: function (hasEverythingRight, hasInheritedAces) {
-      return hasEverythingRight && !hasInheritedAces;
+    _onlyExternalUserAces: function (ace) {
+      return ace.granted && (ace.status === 'pending' || ace.status === 'effective') && ace.externalUser === true;
     },
 
     blockInheritance: function () {
-      this.$.blockOp.execute();
+      this.$.blockOp.execute().then(this.refresh.bind(this));
     },
 
     unblockInheritance: function () {
-      this.$.unblockOp.execute();
-    },
-
-    entityDisplay: function (entity) {
-      if (!entity) {
-        return '';
-      }
-
-      if (typeof entity === 'object') {
-        if (entity['entity-type'] === 'user') {
-          var id = entity.id;
-          var first = entity.properties.firstName;
-          var last = entity.properties.lastName;
-          if (first === null || first.length === 0) {
-            if (last === null || last.length === 0) {
-              return id;
-            } else {
-              return last;
-            }
-          } else {
-            if (last === null || last.length === 0) {
-              return first;
-            } else {
-              return first + ' ' + last;
-            }
-          }
-        } else if (entity['entity-type'] === 'group') {
-          var groupLabel = entity.grouplabel;
-          return groupLabel !== null && groupLabel.length > 0 ? groupLabel : entity.groupname;
-        }
-      }
-      return entity;
-    },
-
-    entityTooltip: function (entity) {
-      if (!entity) {
-        return '';
-      }
-
-      if (typeof entity === 'object') {
-        if (entity['entity-type'] === 'user') {
-          var email = entity.properties.email;
-          return entity.id + (email !== null && email.length > 0 ? ' - ' + email : '');
-        } else if (entity['entity-type'] === 'group') {
-          return entity.groupname;
-        }
-      }
-      return entity;
-    },
-
-    entityClass: function (entity) {
-      if (!entity) {
-        return '';
-      }
-
-      if (typeof entity === 'object') {
-        if (entity['entity-type'] === 'user') {
-          return 'tag user';
-        } else if (entity['entity-type'] === 'group') {
-          return 'tag group';
-        }
-      }
-      return '';
-    },
-
-    aclRowClass: function (ace) {
-      return 'acl-table-row' + ' ' + ace.status;
-    },
-
-    sendEmailExternalSharing: function(e, i) {
-      var item = e.model.dataHost.dataHost.ace;
-      this.$.sendNotificationEmailPermissionOp.params = {
-        id: item.id
-      };
-      var self = this;
-      this.$.sendNotificationEmailPermissionOp.execute().then(function() {
-        self.$.toast.text = self.i18n('label.permissions.permissionNotificationSent', 'Notification Email Sent');
-        self.$.toast.show();
-      });
+      this.$.unblockOp.execute().then(this.refresh.bind(this));
     }
+
   });
 </script>

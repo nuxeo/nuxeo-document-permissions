@@ -11,7 +11,7 @@
     "nuxeo",
     "permissions"
   ],
-  "license": "LGPL",
+  "license": "Apache 2.0",
   "homepage": "https://github.com/nuxeo/nuxeo-document-permissions/",
   "ignore": [
     "/.*",
