@@ -58,7 +58,9 @@ Contributors:
         <div class="tmp-tab">[[i18n('label.permissions.right', 'Right')]]</div>
         <div class="tmp-tab">[[i18n('label.permissions.timeFrame', 'Time Frame')]]</div>
         <div class="tmp-tab">[[i18n('label.permissions.grantedBy', 'Granted by')]]</div>
-        <div class="tmp-tab">[[i18n('label.permissions.actions', 'Actions')]]</div>
+        <template is="dom-if" if="[[showActions]]">
+          <div class="tmp-tab">[[i18n('label.permissions.actions', 'Actions')]]</div>
+        </template>
       </div>
       <template is="dom-repeat" items="[[aces]]" as="ace" sort="_sortAces">
         <div class$="acl-table-row [[ace.status]]">
@@ -68,8 +70,8 @@ Contributors:
           <div><span>{{formatTimeFrame(ace)}}</span></div>
           <div><span class$="[[entityClass(ace.creator)]]" title="[[entityTooltip(ace.creator)]]">[[entityDisplay(ace.creator)]]</span>
           </div>
-          <div>
-            <template is="dom-if" if="[[showActions]]">
+          <template is="dom-if" if="[[showActions]]">
+            <div>
               <nuxeo-popup-permission doc-id="{{doc.uid}}" ace="{{ace}}"
                 user-visible-permissions="{{doc.contextParameters.userVisiblePermissions}}"
                 share-with-external="[[shareWithExternal]]"></nuxeo-popup-permission>
@@ -102,8 +104,8 @@ Contributors:
                   </div>
                 </paper-dialog-scrollable>
               </nuxeo-popup-confirm>
-            </template>
-          </div>
+            </div>
+          </template>
         </div>
       </template>
     </div>
@@ -132,7 +134,7 @@ Polymer({
       observer: 'aceFilterChanged'
     },
     shareWithExternal: {
-      type: Boolean,
+      type: Object, // Boolean
       value: false
     },
     aces: {
@@ -141,12 +143,8 @@ Polymer({
       notify: true
     },
     showActions: {
-      type: Boolean,
+      type: Object, // Boolean
       value: false
-    },
-    isEmpty: {
-      type: Boolean,
-      computed: ''
     }
   },
 
@@ -204,17 +202,15 @@ Polymer({
   },
 
   _deleteAce: function (e, i) {
-    var self = this;
-    e.model.dataHost.previousElementSibling.toggle(function () {
-      // Walk on data hosts in order to retrieve the 'item' property from the repeat loop item context
-      var item = e.model.dataHost.dataHost.ace;
-      self.$.rmPermission.params = {
-        id: item.id
+    var popup = e.currentTarget.parentElement.querySelector("nuxeo-popup-confirm");
+    popup.toggle(function () {
+      this.$.rmPermission.params = {
+        id: e.model.ace.id
       };
-      self.$.rmPermission.execute().then(function() {
-        self.fire('acedeleted');
-      });
-    });
+      this.$.rmPermission.execute().then(function() {
+        this.fire('acedeleted');
+      }.bind(this));
+    }.bind(this));
   },
 
   formatTimeFrame: function (ace) {
