@@ -39,6 +39,12 @@ Contributors:
 -->
 <dom-module id="nuxeo-popup-permission">
   <template>
+    <style>
+      /* Fix polyfill behavior for inputs disabled at initialization */
+      ::content span.btr-dateinput-value {
+         color: #212121 !important;
+      }
+    </style>
     <nuxeo-operation id="createOp" op="Document.AddPermission" input={{docId}} params={{params}}
       on-response="handleResponse"></nuxeo-operation>
     <nuxeo-operation id="replaceOp" op="Document.ReplacePermission" input={{docId}} params={{params}}
