@@ -62,7 +62,7 @@ Contributors:
           <div class="tmp-tab">[[i18n('label.permissions.actions', 'Actions')]]</div>
         </template>
       </div>
-      <template is="dom-repeat" items="[[aces]]" as="ace" sort="_sortAces">
+      <template is="dom-repeat" items="[[aces]]" as="ace" sort="_sortAces" strip-whitespace>
         <div class$="acl-table-row [[ace.status]]">
           <div><span class$="[[entityClass(ace.username)]]" title="[[entityTooltip(ace.username)]]">[[entityDisplay(ace.username)]]</span>
           </div>
