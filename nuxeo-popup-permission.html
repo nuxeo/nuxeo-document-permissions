@@ -57,7 +57,7 @@ Contributors:
       <paper-icon-button on-click="togglePopup" icon="editor:mode-edit"></paper-icon-button>
     </template>
 
-    <paper-dialog id="popupRight" modal _bound-on-focus="{{_ignoreBoundOnFocus}}">
+    <paper-dialog id="popupRight" modal no-auto-focus>
       <template is="dom-if" if="{{!updatingACE}}">
         <template is="dom-if" if="{{!shareWithExternal}}">
           <h2>[[i18n('label.permissions.addPermission', 'Add a Permission')]]</h2>
@@ -193,13 +193,6 @@ Contributors:
       selectedTimeFrame: {
         type: String,
         value: 'permanent'
-      },
-
-      _ignoreBoundOnFocus: {
-        type: Function,
-        value: function () {
-          return this._onFocus.bind(this);
-        }
       }
     },
 
@@ -351,10 +344,6 @@ Contributors:
 
     isUpdatingACE: function (ace) {
       return ace !== null;
-    },
-
-    _onFocus: function () {
-
     }
   });
 </script>
