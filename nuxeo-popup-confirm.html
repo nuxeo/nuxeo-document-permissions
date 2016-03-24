@@ -17,6 +17,7 @@ Contributors:
 -->
 <link rel="import" href="../paper-button/paper-button.html">
 <link rel="import" href="../paper-dialog/paper-dialog.html">
+<link rel="import" href="../paper-dialog-scrollable/paper-dialog-scrollable.html">
 
 <!--
 `nuxeo-popup-confirm`
@@ -26,7 +27,9 @@ Contributors:
 <dom-module id="nuxeo-popup-confirm">
   <template>
     <paper-dialog id="dialog">
-      <content></content>
+      <paper-dialog-scrollable>
+        <content></content>
+      </paper-dialog-scrollable>
       <div class="buttons">
         <paper-button dialog-dismissive on-tap="_onCancel">{{cancelLabel}}</paper-button>
         <paper-button dialog-affirmative class="colorful" on-tap="_onConfirm">{{deleteLabel}}</paper-button>

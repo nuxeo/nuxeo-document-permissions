@@ -81,7 +81,7 @@ Contributors:
               <paper-icon-button icon="delete" on-click="_deleteAce"></paper-icon-button>
               <nuxeo-popup-confirm id="confirmation" delete-label="[[i18n('command.delete', 'Delete')]]"
                 cancel-label="[[i18n('label.permissions.cancel', 'Cancel')]]">
-                <paper-dialog-scrollable>
+                <div>
                   <h2>
                     [[i18n('label.permissions.deleteConfirmation', 'The following permission will be deleted')]]
                   </h2>
@@ -102,7 +102,7 @@ Contributors:
                       </div>
                     </div>
                   </div>
-                </paper-dialog-scrollable>
+                </div>
               </nuxeo-popup-confirm>
             </div>
           </template>
