@@ -1,6 +1,5 @@
 {
   "name": "nuxeo-document-permissions",
-  "version": "0.2.4",
   "authors": [
     "Thomas Roger <troger@nuxeo.com>"
   ],
