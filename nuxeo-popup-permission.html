@@ -43,7 +43,9 @@ Contributors:
       /* Fix polyfill behavior for inputs disabled at initialization */
       ::content span.btr-dateinput-value {
          color: #212121 !important;
+         line-height: 35px !important;
       }
+
     </style>
     <nuxeo-operation id="createOp" op="Document.AddPermission" input={{docId}} params={{params}}
       on-response="handleResponse"></nuxeo-operation>
